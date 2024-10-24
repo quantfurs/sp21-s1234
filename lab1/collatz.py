@@ -1,5 +1,5 @@
 # Class that prints the Collatz sequence starting from a given number.
-# Author: YOUR NAME HERE
+# Author: QF
 
 def next_number(n):
     """Buggy implementation of next_number."""
