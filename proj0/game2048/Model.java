@@ -158,6 +158,17 @@ public class Model extends Observable {
      */
     public static boolean maxTileExists(Board b) {
         // TODO: Fill in this function.
+        int size = b.size(); // Assuming Board has a size() method
+
+        for (int i = 0; i < size; i++) { // Iterate through rows
+            for (int j = 0; j < size; j++) { // Iterate through columns
+                Tile currentTile = b.tile(i, j);
+                System.out.println(currentTile);
+                if (currentTile != null && currentTile.value() == MAX_PIECE) {
+                    return true; // Found a tile with value MAX_PIECE
+                }
+            }
+        }
         return false;
     }
 
