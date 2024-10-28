@@ -163,7 +163,6 @@ public class Model extends Observable {
         for (int i = 0; i < size; i++) { // Iterate through rows
             for (int j = 0; j < size; j++) { // Iterate through columns
                 Tile currentTile = b.tile(i, j);
-                System.out.println(currentTile);
                 if (currentTile != null && currentTile.value() == MAX_PIECE) {
                     return true; // Found a tile with value MAX_PIECE
                 }
@@ -178,8 +177,39 @@ public class Model extends Observable {
      * 1. There is at least one empty space on the board.
      * 2. There are two adjacent tiles with the same value.
      */
+    public static boolean checkIfSameVal(Board b) {
+        int boardSize = b.size(); // Assuming the board is square. Adjust if rectangular.
+
+        for (int i = 0; i < boardSize; i++) {
+            for (int j = 0; j < boardSize; j++) {
+                Tile currentTile = b.tile(i, j);
+                int currentValue = currentTile.value();
+
+                // Check right neighbor
+                if (j < boardSize - 1) {
+                    Tile rightTile = b.tile(i, j + 1);
+                    if (currentValue == rightTile.value()) {
+                        return true;
+                    }
+                }
+
+                // Check bottom neighbor
+                if (i < boardSize - 1) {
+                    Tile bottomTile = b.tile(i + 1, j);
+                    if (currentValue == bottomTile.value()) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     public static boolean atLeastOneMoveExists(Board b) {
         // TODO: Fill in this function.
+        if (emptySpaceExists(b) || checkIfSameVal(b)) {
+            return true;
+        }
         return false;
     }
 
