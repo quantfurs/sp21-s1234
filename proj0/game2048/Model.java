@@ -2,6 +2,8 @@ package game2048;
 
 import java.util.Formatter;
 import java.util.Observable;
+import java.util.List;
+import java.util.ArrayList;
 
 
 /** The state of a game of 2048.
@@ -106,6 +108,112 @@ public class Model extends Observable {
      *    value, then the leading two tiles in the direction of motion merge,
      *    and the trailing tile does not.
      * */
+
+    public static int getValue(Board board, int row, int col) {
+        Tile tile = board.tile(col, row);
+        return tile != null ? tile.value() : 0;
+    }
+
+    public static int[] getColumn(Board board, int colIndex) {
+        int size = board.size();
+        int[] column = new int[size];
+        for (int row = 0; row < size; row++) {
+            Tile tile = board.tile(colIndex, row);
+            column[row] = tile != null ? tile.value() : 0;
+        }
+        return column;
+    }
+
+
+    private boolean moveAndMergeColumn(int col, int[] mergedValues) {
+        boolean changed = false;
+        int size = board.size();
+        int targetRow = size - 1; // Start from the top row
+        boolean[] tileUsed = new boolean[size]; // Keep track of used tiles
+
+        int valueIndex = 0; // Index for mergedValues
+        for (int row = size - 1; row >= 0; row--) {
+            if (valueIndex < mergedValues.length) {
+                int expectedValue = mergedValues[valueIndex];
+                Tile tile = findTileWithValueInColumn(col, expectedValue, tileUsed);
+
+                if (tile != null) {
+                    if (tile.row() != targetRow) {
+                        board.move(col, targetRow, tile);
+                        changed = true;
+                    }
+                    tileUsed[tile.row()] = true; // Mark tile as used
+                }
+                valueIndex++;
+                targetRow--;
+            } else {
+                // Clear any remaining tiles
+                Tile tile = board.tile(col, row);
+                if (tile != null && !tileUsed[row]) {
+                    // Remove the tile by moving it off the board or to the same position
+                    // Since we can't remove tiles, we can move them to the same position
+                    board.move(col, row, tile);
+                    changed = true;
+                }
+            }
+        }
+
+        return changed;
+    }
+
+    private Tile findTileWithValueInColumn(int col, int value, boolean[] tileUsed) {
+        int size = board.size();
+        for (int row = 0; row < size; row++) {
+            Tile tile = board.tile(col, row);
+            if (tile != null && tile.value() == value && !tileUsed[row]) {
+                return tile;
+            }
+        }
+        return null;
+    }
+
+    public static class MergeResult {
+        public int[] mergedTiles;
+        public int score;
+
+        public MergeResult(int[] mergedTiles, int score) {
+            this.mergedTiles = mergedTiles;
+            this.score = score;
+        }
+    }
+
+    public static MergeResult mergeTiles(int[] tiles) {
+        List<Integer> mergedTilesList = new ArrayList<>();
+        int score = 0;
+        int idx = 0;
+
+        while (idx < tiles.length) {
+            int currentValue = tiles[idx];
+            if (idx + 1 < tiles.length && currentValue == tiles[idx + 1]) {
+                int newValue = currentValue * 2;
+                mergedTilesList.add(newValue);
+                score += newValue;
+                idx += 2; // Skip the next tile since it's merged
+            } else {
+                mergedTilesList.add(currentValue);
+                idx += 1;
+            }
+        }
+
+        int[] mergedTiles = mergedTilesList.stream().mapToInt(i -> i).toArray();
+        return new MergeResult(mergedTiles, score);
+    }
+
+    public static class TiltResult {
+        public boolean changed;
+        public int score;
+
+        public TiltResult(boolean changed, int score) {
+            this.changed = changed;
+            this.score = score;
+        }
+    }
+
     public boolean tilt(Side side) {
         boolean changed;
         changed = false;
@@ -113,6 +221,45 @@ public class Model extends Observable {
         // TODO: Modify this.board (and perhaps this.score) to account
         // for the tilt to the Side SIDE. If the board changed, set the
         // changed local variable to true.
+        int size = board.size();
+        board.setViewingPerspective(side);
+
+        for (int col = 0; col < size; col++) {
+            int[] mergedPositions = new int[size]; // Keep track of merged positions
+            for (int row = size - 2; row >= 0; row--) {
+                Tile tile = board.tile(col, row);
+                if (tile != null) {
+                    int destRow = row;
+                    int nextRow = row + 1;
+                    while (nextRow < size) {
+                        Tile nextTile = board.tile(col, nextRow);
+                        if (nextTile == null) {
+                            // Move to the empty spot
+                            destRow = nextRow;
+                        } else if (nextTile.value() == tile.value() && mergedPositions[nextRow] == 0) {
+                            // Merge with the tile
+                            destRow = nextRow;
+                            mergedPositions[destRow] = 1; // Mark as merged
+                            break;
+                        } else {
+                            // Can't move further
+                            break;
+                        }
+                        nextRow++;
+                    }
+                    if (destRow != row) {
+                        boolean merged = board.move(col, destRow, tile);
+                        if (merged) {
+                            score += board.tile(col, destRow).value();
+                            mergedPositions[destRow] = 1; // Mark as merged
+                        }
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        board.setViewingPerspective(Side.NORTH);
 
         checkGameOver();
         if (changed) {
